@@ -1,17 +1,22 @@
+#task 1,2,3
+
 if [ $# -eq 2 ]; then
-    echo "both present"
+    #echo "both present"
     dir=$1
     file=$2
 elif [ $# -eq 1 ]; then
     dir=""
-    file=$1
-    if [ -f "$file" ]; then
-        echo "$file exists"
-    else 
-        echo "File doesn't exist. Please enter an existing input file."
-    fi   
+    file=$1   
 else
     echo "You must enter a valid input file name"
+fi
+
+#task 4
+
+if [[ -f "$file" ]]; then
+        echo "$file exists"
+else 
+        echo "File doesn't exist. Please enter an existing input file."
 fi
 
 
@@ -22,41 +27,50 @@ var1=$(echo $input | cut -f1 -d-)
 var2=$(echo $input | cut -f2 -d-)
 var3=$(echo $input | cut -f3 -d-)
 
+#task 5
+
+#send_to_output_dir(){
+ #   cp $1 ../
+
+#}
 
 
-#trying out stuff
+check_readable_files()
+{
+    directory=$1
 
-if [ $var1 = "begin" ]; then
-    echo begin
-elif [ $var1 = "end" ]; then
-    echo end
-else 
-    echo "invalid first input"
-fi
+    cd ./$directory/
 
+    for file in `ls`;do
 
-#head -$var2 $file | grep -i $var3
-
-
-
-#file1=`cd ./working_dir/ | ls -R`
-#echo $file1
-#modifiedFileList=`tr " " "-" < $file1`
-#echo $modifiedFileList
-#for i in `cd ./working_dir/ | ls -R`
-#do
- #   chmod a+rwx $i
-#  head -$var2 $i | grep -i $var3
-#done
-cd ./$dir/
-
-for file in `find * -type f`;do
-    #echo "$file"
-    temp=`head -$var2 $file | grep -i $var3`
-    echo "$file has $temp"
-done
+        if [[ -d $file ]]; then
+            check_readable_files $file
+            cd ..
+        elif [[ -f $file ]]; then
 
 
+            if [ $var1 = "begin" ]; then
+                temp=`head -$var2 $file | grep -i $var3`
+            elif [ $var1 = "end" ]; then
+                temp=`tail -$var2 $file | grep -i $var3`
+            else 
+                echo "invalid first input"
+            fi
 
+            if [[ -n $temp ]];then
+                echo "$file has $temp"
+                #send_to_output_dir $file
+            fi
 
-#TODO: for each valid file in the directory read first/last n lines and search the word containing files and put them in a output directory
+        fi
+        #echo "$file"
+        
+    done
+
+}
+
+#mkdir output_dir
+
+check_readable_files $dir
+
+#TODO: put them in a output directory
