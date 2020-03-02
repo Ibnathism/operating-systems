@@ -38,11 +38,25 @@ fi
 #head -$var2 $file | grep -i $var3
 
 
-for i in `cd ./working_dir/ | ls -R`
-do
-    chmod a+rwx $i
-    head -$var2 $i | grep -i $var3
+
+#file1=`cd ./working_dir/ | ls -R`
+#echo $file1
+#modifiedFileList=`tr " " "-" < $file1`
+#echo $modifiedFileList
+#for i in `cd ./working_dir/ | ls -R`
+#do
+ #   chmod a+rwx $i
+#  head -$var2 $i | grep -i $var3
+#done
+cd ./$dir/
+
+for file in `find * -type f`;do
+    #echo "$file"
+    temp=`head -$var2 $file | grep -i $var3`
+    echo "$file has $temp"
 done
+
+
 
 
 #TODO: for each valid file in the directory read first/last n lines and search the word containing files and put them in a output directory
