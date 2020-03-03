@@ -38,6 +38,7 @@ check_readable_files()
 {
     directory=$1
     cd ./$directory/
+    #pushd . > /dev/null
     OIFS="$IFS"
     IFS=$'\n'
     for file in `ls`;do
@@ -45,7 +46,7 @@ check_readable_files()
         if [[ -d "$file" ]]; then
             check_readable_files $file
             cd ..
-            #popd
+            #popd > /dev/null
         elif [[ -f "$file" ]]; then
             if [ $var1 = "begin" ]; then
                 temp=`head -$var2 $file | grep -i $var3`
@@ -56,6 +57,10 @@ check_readable_files()
             fi
             if [[ -n $temp ]];then
                 echo "$file has $temp"
+                pushd . > /dev/null
+                #path=`popd`
+                #cp $path/$file ~/Workspaces/Shell/Offline/Offline1/output_dir
+                cp ./$file $dest
             fi
         else
             echo "$file is invalid"
@@ -71,7 +76,13 @@ check_readable_files()
 #popd > /dev/null
 
 #echo `dirs`
+mkdir output_dir
+dest=`pwd`
+echo $dest
+dest="$dest/output_dir"
+check_readable_files $dir $dest
 
-check_readable_files $dir
+
+
 
 #TODO: put them in a output directory
