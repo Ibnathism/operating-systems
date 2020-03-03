@@ -36,12 +36,17 @@ var3=$(echo $input | cut -f3 -d-)
 
 check_readable_files()
 {
+    directory=$1
     cd ./$directory/
+    OIFS="$IFS"
+    IFS=$'\n'
     for file in `ls`;do
-        if [[ -d $file ]]; then
+        #echo "$file"
+        if [[ -d "$file" ]]; then
             check_readable_files $file
             cd ..
-        elif [[ -f $file ]]; then
+            #popd
+        elif [[ -f "$file" ]]; then
             if [ $var1 = "begin" ]; then
                 temp=`head -$var2 $file | grep -i $var3`
             elif [ $var1 = "end" ]; then
@@ -52,10 +57,20 @@ check_readable_files()
             if [[ -n $temp ]];then
                 echo "$file has $temp"
             fi
+        else
+            echo "$file is invalid"
         fi
     done
+    IFS="$OIFS"
 
 }
+
+#echo `dirs`
+#pushd . > /dev/null
+#echo `dirs`
+#popd > /dev/null
+
+#echo `dirs`
 
 check_readable_files $dir
 
