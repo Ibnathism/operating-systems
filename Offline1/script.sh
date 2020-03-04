@@ -29,7 +29,7 @@ var1=$(echo $input | cut -f1 -d-)
 var2=$(echo $input | cut -f2 -d-)
 var3=$(echo $input | cut -f3 -d-)
 
-#task 5
+#task 5,6
 
 
 
@@ -57,10 +57,13 @@ check_readable_files()
             fi
             if [[ -n $temp ]];then
                 echo "$file has $temp"
-                pushd . > /dev/null
-                #path=`popd`
-                #cp $path/$file ~/Workspaces/Shell/Offline/Offline1/output_dir
+                newName="$PWD/$file"
+                dot="."
+                newName=${newName////$dot}
                 cp ./$file $dest
+                cd $dest/ 
+                mv $file $newName
+                cd $OLDPWD
             fi
         else
             echo "$file is invalid"
@@ -70,19 +73,7 @@ check_readable_files()
 
 }
 
-#echo `dirs`
-#pushd . > /dev/null
-#echo `dirs`
-#popd > /dev/null
-
-#echo `dirs`
 mkdir output_dir
 dest=`pwd`
-echo $dest
 dest="$dest/output_dir"
-check_readable_files $dir $dest
-
-
-
-
-#TODO: put them in a output directory
+check_readable_files $dir
