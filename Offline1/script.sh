@@ -37,61 +37,63 @@ count_line_number()
 
     if [ $var1 = "begin" ]; then
         lineNumber=`head -$var2 $myfile | grep -n -i $var3 | sed 's/^\([0-9]\+\):.*$/\1/'`
-        echo $lineNumber
+        #echo $lineNumber
     elif [ $var1 = "end" ]; then
         lineNumber=`tail -$var2 $myfile | grep -n -i $var3 | sed 's/^\([0-9]\+\):.*$/\1/'`
         totalLines=`wc -l $myfile | sed 's/^\([0-9]\+\)\ .*$/\1/'`
-        echo "$myfile Total : $totalLines  lineNumber = $lineNumber"
+        #echo "$myfile Total : $totalLines  lineNumber = $lineNumber"
         if [[ $totalLines -le $var2 ]];then
             echo $lineNumber
         else 
             lineNumber=`expr $totalLines + $lineNumber`
             lineNumber=`expr $lineNumber - $var2`
-            echo $lineNumber
+            #echo $lineNumber
         fi
     else
         echo "$file is invalid"
     fi
 }
 
-check_readable_files()
-{
+check_files(){
     directory=$1
-    cd ./$directory/
-    #pushd . > /dev/null
+    cd $PWD/$directory/
     OIFS="$IFS"
     IFS=$'\n'
-    for file in `ls`;do
-        #echo "$file"
-        if [[ -d "$file" ]]; then
-            check_readable_files $file
-            cd ..
-            #popd > /dev/null
-        elif [[ -f "$file" ]]; then
-            if [[ -r "$file" ]]; then
-                if [ $var1 = "begin" ]; then
-                    temp=`head -$var2 $file | grep -i $var3`
-                elif [ $var1 = "end" ]; then
-                    temp=`tail -$var2 $file | grep -i $var3`
-                else 
-                    echo "invalid first input"
-                fi
-            fi
-            if [[ -n $temp ]];then
-                echo "$file has $temp"
-                count_line_number $file
-                lines=$lineNumber
-                newName="$PWD/$file"
-                dot="."
-                newName=${newName////$dot}
-                
-                cp ./$file $dest
-                cd $dest/ 
-                mv $file $newName
-                cd $OLDPWD
-            fi
-        else
-            echo "$file is invalid"
+    for file in `find ./ -type f -exec grep -Iq . {} \; -print`
+    do
+      #echo $file  
+        if [ $var1 = "begin" ]; then
+            temp=`head -$var2 $file | grep -i $var3`
+        elif [ $var1 = "end" ]; then
+            temp=`tail -$var2 $file | grep -i $var3`
+        else 
+            echo "invalid first input"
+        fi
+        if [[ -n $temp ]];then
+            #echo "$file has $temp"
+            count_line_number $file
+            lines=$lineNumber
+            cp $file $dest
+            cd $dest/ 
+            case `basename "$file"` in
+            *.* ) 
+            extension="${file##*.}"
+            filename="${file%.*}"
+            filename=$filename\_$lines"."$extension
+            ;;
+            * ) filename=$file\_$lines
+            ;;
+            esac
+            dot="."
+            newName="$filename"
+            newName=${newName////$dot}
+            newName=${newName#".."}
+            directory=${directory////$dot}
+            newName=$directory$newName
+            newFile=${file##*/}
+            mv $newFile $newName
+            #echo $newName
+            cd $OLDPWD
         fi
     done
     IFS="$OIFS"
@@ -100,4 +102,6 @@ check_readable_files()
 mkdir output_dir
 dest=`pwd`
 dest="$dest/output_dir"
-check_readable_files $dir
+#check_readable_files $dir
+
+check_files $dir
