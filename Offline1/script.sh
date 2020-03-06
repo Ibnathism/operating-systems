@@ -16,7 +16,7 @@ fi
 #task 4
 
 if [[ -f "$file" ]]; then
-        echo "$file exists"
+        echo ""
 else 
         echo "File doesn't exist. Please enter an existing input file."
 fi
@@ -56,6 +56,8 @@ count_line_number()
 
 check_files(){
     directory=$1
+    count=0;
+    echo "File Path,Line Number,Line Containing Searched String" >> output.csv
     cd $PWD/$directory/
     OIFS="$IFS"
     IFS=$'\n'
@@ -70,18 +72,27 @@ check_files(){
             echo "invalid first input"
         fi
         if [[ -n $temp ]];then
+            count=`expr $count + 1`
             #echo "$file has $temp"
             count_line_number $file
             lines=$lineNumber
             cp $file $dest
+            cd ..
+            forCsv=${file#"./"}
+            #echo $dir 
+            #echo $forCsv
+            forCsv="$dir$forCsv"
+            #echo $forCsv
+            echo "$forCsv,$lines,$temp" >> output.csv
+            cd $OLDPWD
             cd $dest/ 
             case `basename "$file"` in
             *.* ) 
             extension="${file##*.}"
             filename="${file%.*}"
-            filename=$filename\_$lines"."$extension
+            filename=$filename$lines"."$extension
             ;;
-            * ) filename=$file\_$lines
+            * ) filename=$file$lines
             ;;
             esac
             dot="."
@@ -94,6 +105,7 @@ check_files(){
             mv $newFile $newName
             #echo $newName
             cd $OLDPWD
+            
         fi
     done
     IFS="$OIFS"
@@ -102,6 +114,5 @@ check_files(){
 mkdir output_dir
 dest=`pwd`
 dest="$dest/output_dir"
-#check_readable_files $dir
-
 check_files $dir
+echo "File Count : $count"
