@@ -15,7 +15,9 @@ remove_from_root="${root%/*$base_root}"
 echo $base_root $remove_from_root
 
 cmd=$(head -n 1 "$input" | tail -n 1)
+echo $cmd
 nol=$(head -n 2 "$input" | tail -n 1)
+echo $nol
 word_to_search=$(head -n 3 "$input" | tail -n 1)
 
 
@@ -35,6 +37,7 @@ traverse_directories() {
 					fn="${f%.*}"
 					ext="${f##*.}"
 					line_no=$($cmd -n $nol $f | grep -ni $word_to_search | cut -f1 -d':')
+					echo $line_no
 					new_file_name="${fn}_${line_no}.${ext}"
 					cp $f "${output_dir_path}/${new_file_name}"
 				fi
