@@ -28,6 +28,7 @@ void *produce_item(void *arg)
         pthread_mutex_lock(&mutex);
         sleep(3);
         printf("%s producer has produced %d th item\n", (char *)arg, ind);
+        fflush(stdout);
         ind++;
         pthread_mutex_unlock(&mutex);
         sem_post(&full_array);
@@ -43,6 +44,7 @@ void *consume_item(void *arg)
         pthread_mutex_lock(&mutex);
         sleep(1);
         printf("%s consumer has consumed %d th item\n", (char *)arg, ind - 1);
+        fflush(stdout);
         ind--;
         pthread_mutex_unlock(&mutex);
         sem_post(&empty_array);
@@ -58,18 +60,21 @@ int main(int argc, char *argv[])
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
 
     res = sem_init(&full_array, 0, 0);
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
 
     res = pthread_mutex_init(&mutex, NULL);
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
 
     //Thread Declaration
@@ -86,6 +91,7 @@ int main(int argc, char *argv[])
         if (res != 0)
         {
             printf("Thread creation failed\n");
+            fflush(stdout);
         }
     }
     //Consumer Creation
@@ -99,6 +105,7 @@ int main(int argc, char *argv[])
         if (res != 0)
         {
             printf("Thread creation failed\n");
+            fflush(stdout);
         }
     }
 
@@ -107,6 +114,7 @@ int main(int argc, char *argv[])
         void *result;
         pthread_join(producers[i], &result);
         printf("%s", (char *)result);
+        fflush(stdout);
     }
 
     for (int i = 0; i < number_of_consumers; i++)
@@ -114,23 +122,27 @@ int main(int argc, char *argv[])
         void *result;
         pthread_join(consumers[i], &result);
         printf("%s", (char *)result);
+        fflush(stdout);
     }
 
     res = sem_destroy(&full_array);
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
     res = sem_destroy(&empty_array);
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
 
     res = pthread_mutex_destroy(&mutex);
     if (res != 0)
     {
         printf("Failed\n");
+        fflush(stdout);
     }
 
     return 0;
