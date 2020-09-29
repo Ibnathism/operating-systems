@@ -6,6 +6,20 @@
 #include <cstring>
 #include <time.h>
 
+// F1 = Entrance -> Service Room
+// F2 = Room changing inside Service Room (Left to Right)
+// F3 = Service -> Payment
+// F4 = Payment -> Service
+// F5 = departure
+
+// Constraints:       1. if service_room_capacity full, ENTRY PROHIBITED from left
+//                    2. if there's anyone left->right direction person inside service room, ENTRY PROHIBITED from right
+//                    3. if there's anyone right->left direction person inside service room, ENTRY PROHIBITED from left
+//                    4. if there's anyone in the path "payment->service", ENTRY PROHIBITED from left to service room
+//                    5. if payment_room_capacity full, ENTRY PROHIBITED from left
+//                    6. A service can contain only one cycle at a time
+//                    7. Payment ready means incoming service off
+
 using namespace std;
 
 #define number_of_producers 2
@@ -13,10 +27,6 @@ using namespace std;
 #define arr_size 1
 
 int ind = 0;
-
-// empty_array == capacity
-// full_array == currentItems
-
 sem_t full_array, empty_array;
 pthread_mutex_t mutex;
 
@@ -28,12 +38,11 @@ void *produce_item(void *arg)
         pthread_mutex_lock(&mutex);
         sleep(3);
         printf("%s producer has produced %d th item\n", (char *)arg, ind);
-        fflush(stdout);
         ind++;
         pthread_mutex_unlock(&mutex);
         sem_post(&full_array);
     }
-    //pthread_exit((void*)strcat((char*)arg," producer is finishing\n"));
+    //pthread_exit((void *)strcat((char *)arg, " producer is finishing\n"));
 }
 
 void *consume_item(void *arg)
@@ -44,12 +53,11 @@ void *consume_item(void *arg)
         pthread_mutex_lock(&mutex);
         sleep(1);
         printf("%s consumer has consumed %d th item\n", (char *)arg, ind - 1);
-        fflush(stdout);
         ind--;
         pthread_mutex_unlock(&mutex);
         sem_post(&empty_array);
     }
-    //pthread_exit((void*)strcat((char*)arg," consumer is finishing\n"));
+    //pthread_exit((void *)strcat((char *)arg, " consumer is finishing\n"));
 }
 
 int main(int argc, char *argv[])
@@ -60,27 +68,21 @@ int main(int argc, char *argv[])
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
 
     res = sem_init(&full_array, 0, 0);
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
 
     res = pthread_mutex_init(&mutex, NULL);
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
 
-    //Thread Declaration
     pthread_t producers[number_of_producers], consumers[number_of_consumers];
-
-    //Producer Creation
     for (int i = 0; i < number_of_producers; i++)
     {
         char *id = new char[3];
@@ -91,10 +93,9 @@ int main(int argc, char *argv[])
         if (res != 0)
         {
             printf("Thread creation failed\n");
-            fflush(stdout);
         }
     }
-    //Consumer Creation
+
     for (int i = 0; i < number_of_consumers; i++)
     {
         char *id = new char[3];
@@ -105,7 +106,6 @@ int main(int argc, char *argv[])
         if (res != 0)
         {
             printf("Thread creation failed\n");
-            fflush(stdout);
         }
     }
 
@@ -114,7 +114,6 @@ int main(int argc, char *argv[])
         void *result;
         pthread_join(producers[i], &result);
         printf("%s", (char *)result);
-        fflush(stdout);
     }
 
     for (int i = 0; i < number_of_consumers; i++)
@@ -122,27 +121,23 @@ int main(int argc, char *argv[])
         void *result;
         pthread_join(consumers[i], &result);
         printf("%s", (char *)result);
-        fflush(stdout);
     }
 
     res = sem_destroy(&full_array);
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
     res = sem_destroy(&empty_array);
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
 
     res = pthread_mutex_destroy(&mutex);
     if (res != 0)
     {
         printf("Failed\n");
-        fflush(stdout);
     }
 
     return 0;

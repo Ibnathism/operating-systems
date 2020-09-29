@@ -8,30 +8,228 @@
 
 using namespace std;
 
-#define service_room_capacity 3
-#define payment_room_capacity 2
+#define S 3
+#define C 2
 #define number_of_cycles 10
 
-// Shared Resource #1: Service Room
-// Producer: People entering into the service room (Either from entrance / from payment room)
-// Consumer: People exiting from service room to payment room
+sem_t service_capacity_sem, service_currentItems_sem;
+sem_t payment_capacity_sem, payment_currentItems_sem;
+pthread_mutex_t servicemen_mutex[S];
+pthread_mutex_t direction_mutex;
+pthread_mutex_t payment_mutex;
 
-// Shared Resource #2: Payment Room
-// Producer: People entering to payment room after finishing service
-// Consumer: People exiting from payment room to service room
+void depart(void *arg)
+{
+    sem_wait(&service_capacity_sem);
+    sem_post(&service_currentItems_sem);
+    printf("%s has departed\n", (char *)arg);
+    sem_wait(&service_currentItems_sem);
+    sem_post(&service_capacity_sem);
+    int service_capacity, res;
+    res = sem_getvalue(&service_capacity_sem, &service_capacity);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+    if (service_capacity == S)
+    {
+        pthread_mutex_unlock(&direction_mutex);
+        pthread_mutex_unlock(&servicemen_mutex[0]);
+    }
+}
+void try_to_enter_service_room(void *arg)
+{
+    sem_wait(&payment_currentItems_sem);
+    pthread_mutex_lock(&payment_mutex);
+    printf("%s finished paying the service bill\n", (char *)arg);
+    pthread_mutex_unlock(&payment_mutex);
+    sem_post(&payment_capacity_sem);
+    int service_current, res;
+    res = sem_getvalue(&service_currentItems_sem, &service_current);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
 
-// So, Consumer of #1 is basically the Producer of #2
+    if (service_current == 0)
+    {
+        pthread_mutex_lock(&servicemen_mutex[0]);
+        pthread_mutex_lock(&direction_mutex);
+    }
+    depart(arg);
+}
+void go_to_payment_room(void *arg)
+{
+    sem_post(&service_capacity_sem);
+    int capacity, res;
+    res = sem_getvalue(&service_capacity_sem, &capacity);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+    if (capacity == S)
+    {
+        pthread_mutex_unlock(&direction_mutex);
+    }
+    sem_wait(&payment_capacity_sem);
+    pthread_mutex_lock(&payment_mutex);
+    printf("%s started paying the service bill\n", (char *)arg);
+    pthread_mutex_unlock(&payment_mutex);
+    sem_post(&payment_currentItems_sem);
+    try_to_enter_service_room(arg);
+}
+void change_room(int i, void *arg)
+{
+    pthread_mutex_unlock(&servicemen_mutex[i - 1]);
+    printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1);
+    if (i == 1)
+    {
+        sem_post(&service_currentItems_sem);
+    }
+    if (i == S)
+    {
+        sem_wait(&service_currentItems_sem);
+        go_to_payment_room(arg);
+        return;
+    }
+    pthread_mutex_lock(&servicemen_mutex[i]);
+    printf("%s started taking service from serviceman %d\n", (char *)arg, i);
+    change_room(i + 1, arg);
+}
+void *enter_service_room(void *arg)
+{
+    sem_wait(&service_capacity_sem);
+    pthread_mutex_lock(&servicemen_mutex[0]);
+    int current_items, res;
+    res = sem_getvalue(&service_currentItems_sem, &current_items);
+    //printf("Semaphore %d\n", surrent_items);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+    if (current_items == 0)
+    {
+        pthread_mutex_lock(&direction_mutex);
+    }
+    printf("%s started taking service from serviceman 0\n", (char *)arg);
+    change_room(1, arg);
+}
 
-// F1 = Entrance -> Service Room
-// F2 = Room changing inside Service Room (Left to Right)
-// F3 = Service -> Payment
-// F4 = Payment -> Service
-// F5 = departure
+int main(int argc, char *argv[])
+{
+    int res;
 
-// Constraints:       1. if service_room_capacity full, ENTRY PROHIBITED from left
-//                    2. if there's anyone left->right direction person inside service room, ENTRY PROHIBITED from right
-//                    3. if there's anyone right->left direction person inside service room, ENTRY PROHIBITED from left
-//                    4. if there's anyone in the path "payment->service", ENTRY PROHIBITED from left to service room
-//                    5. if payment_room_capacity full, ENTRY PROHIBITED from left
-//                    6. A service can contain only one cycle at a time
-//                    7. Payment ready means incoming service off
+    res = sem_init(&service_capacity_sem, 0, S);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    res = sem_init(&service_currentItems_sem, 0, 0);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    res = sem_init(&payment_capacity_sem, 0, C);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    res = sem_init(&payment_currentItems_sem, 0, 0);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    res = pthread_mutex_init(&direction_mutex, NULL);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    res = pthread_mutex_init(&payment_mutex, NULL);
+    if (res != 0)
+    {
+        printf("Failed\n");
+    }
+
+    for (int i = 0; i < S; i++)
+    {
+        res = pthread_mutex_init(&servicemen_mutex[i], NULL);
+        if (res != 0)
+        {
+            printf("Failed\n");
+        }
+    }
+
+    pthread_t customers[number_of_cycles];
+    for (int i = 0; i < number_of_cycles; i++)
+    {
+        char *id = new char[3];
+        strcpy(id, to_string(i + 1).c_str());
+
+        res = pthread_create(&customers[i], NULL, enter_service_room, (void *)id);
+
+        if (res != 0)
+        {
+            printf("Thread creation failed\n");
+        }
+    }
+
+    /*for (int i = 0; i < number_of_cycles; i++)
+    {
+        void *result;
+        pthread_join(customers[i], &result);
+        printf("%s", (char *)result);
+    }*/
+
+    /*res = sem_destroy(&service_capacity_sem);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = sem_destroy(&service_currentItems_sem);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = sem_destroy(&payment_capacity_sem);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = sem_destroy(&payment_currentItems_sem);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = pthread_mutex_destroy(&direction_mutex);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = pthread_mutex_destroy(&payment_mutex);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    for (int i = 0; i < S; i++)
+    {
+        res = pthread_mutex_destroy(&servicemen_mutex[i]);
+        if (res != 0)
+        {
+            printf("Failed\n");
+            fflush(stdout);
+        }
+    }*/
+
+    return 0;
+}
