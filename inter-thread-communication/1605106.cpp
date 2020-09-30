@@ -8,9 +8,9 @@
 
 using namespace std;
 
-#define S 5
+#define S 3
 #define C 2
-#define number_of_cycles 100
+#define number_of_cycles 10
 
 sem_t service_capacity_sem, service_currentItems_sem;
 sem_t payment_capacity_sem, payment_currentItems_sem;
@@ -40,7 +40,7 @@ void depart(void *arg)
         pthread_mutex_unlock(&servicemen_mutex[0]);
     }
 }
-void try_to_enter_service_room(void *arg)
+void leave_payment_room(void *arg)
 {
     sem_wait(&payment_currentItems_sem);
     pthread_mutex_lock(&payment_mutex);
@@ -48,6 +48,7 @@ void try_to_enter_service_room(void *arg)
     fflush(stdout);
     pthread_mutex_unlock(&payment_mutex);
     sem_post(&payment_capacity_sem);
+
     /*int service_current, res;
     res = sem_getvalue(&service_currentItems_sem, &service_current);
     if (res != 0)
@@ -67,6 +68,7 @@ void go_to_payment_room(void *arg)
 {
 
     sem_post(&service_capacity_sem);
+
     /*int capacity, res;
     res = sem_getvalue(&service_capacity_sem, &capacity);
     if (res != 0)
@@ -78,12 +80,15 @@ void go_to_payment_room(void *arg)
     {
         pthread_mutex_unlock(&direction_mutex);
     }*/
-    //sem_wait(&payment_capacity_sem);
+
+    sem_wait(&payment_capacity_sem);
     pthread_mutex_lock(&payment_mutex);
     printf("%s started paying the service bill\n", (char *)arg);
     fflush(stdout);
     pthread_mutex_unlock(&payment_mutex);
-    //try_to_enter_service_room(arg);
+    sem_post(&payment_currentItems_sem);
+
+    leave_payment_room(arg);
 }
 void change_room(int i, void *arg)
 {
