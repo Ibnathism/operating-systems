@@ -9,14 +9,13 @@
 using namespace std;
 
 #define S 3
-#define C 2
-#define number_of_cycles 10
+#define C 5
+#define number_of_cycles 30
 
 sem_t service_capacity_sem, service_currentItems_sem;
 sem_t payment_capacity_sem, payment_currentItems_sem;
 pthread_mutex_t servicemen_mutex[S];
 pthread_mutex_t direction_mutex;
-pthread_mutex_t payment_mutex;
 
 void depart(void *arg)
 {
@@ -43,10 +42,8 @@ void depart(void *arg)
 void leave_payment_room(void *arg)
 {
     sem_wait(&payment_currentItems_sem);
-    pthread_mutex_lock(&payment_mutex);
     printf("%s finished paying the service bill\n", (char *)arg);
     fflush(stdout);
-    pthread_mutex_unlock(&payment_mutex);
     sem_post(&payment_capacity_sem);
 
     /*int service_current, res;
@@ -82,10 +79,8 @@ void go_to_payment_room(void *arg)
     }*/
 
     sem_wait(&payment_capacity_sem);
-    pthread_mutex_lock(&payment_mutex);
     printf("%s started paying the service bill\n", (char *)arg);
     fflush(stdout);
-    pthread_mutex_unlock(&payment_mutex);
     sem_post(&payment_currentItems_sem);
 
     leave_payment_room(arg);
@@ -176,13 +171,6 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
 
-    res = pthread_mutex_init(&payment_mutex, NULL);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-
     for (int i = 0; i < S; i++)
     {
         res = pthread_mutex_init(&servicemen_mutex[i], NULL);
@@ -239,12 +227,6 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
     res = pthread_mutex_destroy(&direction_mutex);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-    res = pthread_mutex_destroy(&payment_mutex);
     if (res != 0)
     {
         printf("Failed\n");
