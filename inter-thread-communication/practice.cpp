@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < number_of_consumers; i++)
     {
         char *id = new char[3];
-        strcpy(id, to_string(i + 1).c_str());
+        strcpy(id, to_string(i).c_str());
 
         res = pthread_create(&consumers[i], NULL, consume_item, (void *)id);
 
