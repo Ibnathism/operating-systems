@@ -9,8 +9,8 @@
 using namespace std;
 
 #define S 3
-#define C 5
-#define number_of_cycles 30
+#define C 2
+#define number_of_cycles 10
 
 sem_t service_capacity_sem, service_currentItems_sem;
 sem_t payment_capacity_sem, payment_currentItems_sem;
@@ -59,7 +59,8 @@ void leave_payment_room(void *arg)
         //printf("debug\n");
         pthread_mutex_lock(&servicemen_mutex[0]);
         pthread_mutex_lock(&direction_mutex);
-    }*/
+    }
+    depart(arg);*/
 }
 void go_to_payment_room(void *arg)
 {
