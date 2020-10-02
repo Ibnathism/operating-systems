@@ -17,48 +17,62 @@ using namespace std;
 sem_t service_capacity_sem, service_currentItems_sem;
 sem_t payment_capacity_sem, payment_currentItems_sem;
 pthread_mutex_t servicemen_mutex[S];
-pthread_mutex_t direction_mutex;
 
-pthread_mutex_t N, L;
+queue<char *> entryQ;
+queue<char *> exitQ;
+pthread_mutex_t entry_mutex, exit_mutex;
 
 void depart(void *arg)
 {
-    pthread_mutex_lock(&N);
-    for (int i = 0; i < S; i++)
-    {
-        pthread_mutex_lock(&servicemen_mutex[i]);
-    }
-    pthread_mutex_unlock(&N);
-
     sem_wait(&service_capacity_sem);
+
+    while (true)
+    {
+        pthread_mutex_lock(&entry_mutex);
+        bool isExit = entryQ.empty();
+        pthread_mutex_unlock(&entry_mutex);
+        if (isExit)
+        {
+            break;
+        }
+    }
+
     sem_post(&service_currentItems_sem);
 
     printf("%s has departed\n", (char *)arg);
     fflush(stdout);
     sem_wait(&service_currentItems_sem);
-    sem_post(&service_capacity_sem);
 
-    for (int i = 0; i < S; i++)
-    {
-        pthread_mutex_unlock(&servicemen_mutex[i]);
-    }
+    pthread_mutex_lock(&exit_mutex);
+    exitQ.pop();
+    pthread_mutex_unlock(&exit_mutex);
+
+    sem_post(&service_capacity_sem);
 }
 void leave_payment_room(void *arg)
 {
     sem_wait(&payment_currentItems_sem);
+
+    pthread_mutex_lock(&exit_mutex);
+    exitQ.push((char *)arg);
+    pthread_mutex_unlock(&exit_mutex);
+
+    sem_post(&payment_capacity_sem);
+
     int random = rand() % 100 + 1;
     this_thread::sleep_for(chrono::milliseconds(random));
     printf("%s finished paying the service bill\n", (char *)arg);
     fflush(stdout);
-
-    sem_post(&payment_capacity_sem);
-
     depart(arg);
 }
 void go_to_payment_room(void *arg)
 {
 
     sem_post(&service_capacity_sem);
+
+    pthread_mutex_lock(&entry_mutex);
+    entryQ.pop();
+    pthread_mutex_unlock(&entry_mutex);
 
     sem_wait(&payment_capacity_sem);
     printf("%s started paying the service bill\n", (char *)arg);
@@ -81,8 +95,6 @@ void change_room(int i, void *arg)
         fflush(stdout);
         pthread_mutex_unlock(&servicemen_mutex[i - 1]);
 
-        pthread_mutex_unlock(&L);
-
         sem_wait(&service_currentItems_sem);
 
         go_to_payment_room(arg);
@@ -103,13 +115,24 @@ void change_room(int i, void *arg)
 }
 void *enter_service_room(void *arg)
 {
-    pthread_mutex_lock(&L);
-    pthread_mutex_lock(&N);
-
-    sem_wait(&service_capacity_sem); //down
     pthread_mutex_lock(&servicemen_mutex[0]);
+    sem_wait(&service_capacity_sem); //down
 
-    pthread_mutex_unlock(&N);
+    while (true)
+    {
+        pthread_mutex_lock(&exit_mutex);
+        bool isEnter = exitQ.empty();
+        pthread_mutex_unlock(&exit_mutex);
+
+        if (isEnter)
+        {
+            break;
+        }
+    }
+
+    pthread_mutex_lock(&entry_mutex);
+    entryQ.push((char *)arg);
+    pthread_mutex_unlock(&entry_mutex);
 
     printf("%s started taking service from serviceman 1\n", (char *)arg);
     fflush(stdout);
@@ -149,21 +172,14 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
 
-    res = pthread_mutex_init(&direction_mutex, NULL);
+    res = pthread_mutex_init(&entry_mutex, NULL);
     if (res != 0)
     {
         printf("Failed\n");
         fflush(stdout);
     }
 
-    res = pthread_mutex_init(&N, NULL);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-
-    res = pthread_mutex_init(&L, NULL);
+    res = pthread_mutex_init(&exit_mutex, NULL);
     if (res != 0)
     {
         printf("Failed\n");
@@ -225,24 +241,21 @@ int main(int argc, char *argv[])
         printf("Failed\n");
         fflush(stdout);
     }
-    res = pthread_mutex_destroy(&direction_mutex);
+
+    res = pthread_mutex_destroy(&entry_mutex);
     if (res != 0)
     {
         printf("Failed\n");
         fflush(stdout);
     }
-    res = pthread_mutex_destroy(&N);
+
+    res = pthread_mutex_destroy(&exit_mutex);
     if (res != 0)
     {
         printf("Failed\n");
         fflush(stdout);
     }
-    res = pthread_mutex_destroy(&L);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
+
     for (int i = 0; i < S; i++)
     {
         res = pthread_mutex_destroy(&servicemen_mutex[i]);
