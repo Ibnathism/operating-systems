@@ -7,38 +7,40 @@
 #include <time.h>
 #include <chrono>
 #include <thread>
+#include <queue>
 
 using namespace std;
 
 #define S 3
 #define C 2
 #define number_of_cycles 10
-
 sem_t service_capacity_sem, service_currentItems_sem;
 sem_t payment_capacity_sem, payment_currentItems_sem;
 pthread_mutex_t servicemen_mutex[S];
 pthread_mutex_t direction_mutex;
 
+pthread_mutex_t N, L;
+
 void depart(void *arg)
 {
+    pthread_mutex_lock(&N);
+    for (int i = 0; i < S; i++)
+    {
+        pthread_mutex_lock(&servicemen_mutex[i]);
+    }
+    pthread_mutex_unlock(&N);
 
     sem_wait(&service_capacity_sem);
     sem_post(&service_currentItems_sem);
+
     printf("%s has departed\n", (char *)arg);
     fflush(stdout);
     sem_wait(&service_currentItems_sem);
     sem_post(&service_capacity_sem);
-    int service_capacity, res;
-    res = sem_getvalue(&service_capacity_sem, &service_capacity);
-    if (res != 0)
+
+    for (int i = 0; i < S; i++)
     {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-    if (service_capacity == S)
-    {
-        pthread_mutex_unlock(&direction_mutex);
-        pthread_mutex_unlock(&servicemen_mutex[0]);
+        pthread_mutex_unlock(&servicemen_mutex[i]);
     }
 }
 void leave_payment_room(void *arg)
@@ -48,46 +50,15 @@ void leave_payment_room(void *arg)
     this_thread::sleep_for(chrono::milliseconds(random));
     printf("%s finished paying the service bill\n", (char *)arg);
     fflush(stdout);
+
     sem_post(&payment_capacity_sem);
 
-    //TODO
-    /*int service_current, res;
-    res = sem_getvalue(&service_currentItems_sem, &service_current);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-
-    if (service_current == 0)
-    {
-        pthread_mutex_lock(&servicemen_mutex[0]);
-        pthread_mutex_lock(&direction_mutex);
-    }
-    depart(arg);*/
-
-    //TODO
+    depart(arg);
 }
 void go_to_payment_room(void *arg)
 {
 
     sem_post(&service_capacity_sem);
-
-    //TODO
-
-    /*int capacity, res;
-    res = sem_getvalue(&service_capacity_sem, &capacity);
-    if (res != 0)
-    {
-        printf("Failed\n");
-        fflush(stdout);
-    }
-    if (capacity == S)
-    {
-        pthread_mutex_unlock(&direction_mutex);
-    }*/
-
-    //TODO
 
     sem_wait(&payment_capacity_sem);
     printf("%s started paying the service bill\n", (char *)arg);
@@ -109,11 +80,16 @@ void change_room(int i, void *arg)
         printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1 + 1);
         fflush(stdout);
         pthread_mutex_unlock(&servicemen_mutex[i - 1]);
+
+        pthread_mutex_unlock(&L);
+
         sem_wait(&service_currentItems_sem);
+
         go_to_payment_room(arg);
         return;
     }
     pthread_mutex_lock(&servicemen_mutex[i]);
+
     int random = rand() % 100 + 1;
     this_thread::sleep_for(chrono::milliseconds(random));
     printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1 + 1);
@@ -127,28 +103,17 @@ void change_room(int i, void *arg)
 }
 void *enter_service_room(void *arg)
 {
+    pthread_mutex_lock(&L);
+    pthread_mutex_lock(&N);
+
     sem_wait(&service_capacity_sem); //down
     pthread_mutex_lock(&servicemen_mutex[0]);
 
-    //TODO
-
-    /*int current_items, res;
-        res = sem_getvalue(&service_currentItems_sem, &current_items);
-        //printf("Semaphore %d\n", surrent_items);
-        if (res != 0)
-        {
-            printf("Failed\n");
-            fflush(stdout);
-        }
-        if (current_items == 0)
-        {
-            pthread_mutex_lock(&direction_mutex);
-        }*/
-
-    //TODO
+    pthread_mutex_unlock(&N);
 
     printf("%s started taking service from serviceman 1\n", (char *)arg);
     fflush(stdout);
+
     change_room(1, arg);
 }
 
@@ -185,6 +150,20 @@ int main(int argc, char *argv[])
     }
 
     res = pthread_mutex_init(&direction_mutex, NULL);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+
+    res = pthread_mutex_init(&N, NULL);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+
+    res = pthread_mutex_init(&L, NULL);
     if (res != 0)
     {
         printf("Failed\n");
@@ -247,6 +226,18 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
     res = pthread_mutex_destroy(&direction_mutex);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = pthread_mutex_destroy(&N);
+    if (res != 0)
+    {
+        printf("Failed\n");
+        fflush(stdout);
+    }
+    res = pthread_mutex_destroy(&L);
     if (res != 0)
     {
         printf("Failed\n");

@@ -5,7 +5,7 @@
 using namespace std;
 
 #ifndef SCRIPTED
-const int CYCLIST_COUNT = 5, SERVICE_ROOM_COUNT = 3, PAYMENT_ROOM_CAPACITY = 2;
+const int CYCLIST_COUNT = 10, SERVICE_ROOM_COUNT = 3, PAYMENT_ROOM_CAPACITY = 2;
 #endif
 
 const int PAYID = 1000005, WAITID = 1000006, DONEID = 1000007;
@@ -13,8 +13,8 @@ const int PAYID = 1000005, WAITID = 1000006, DONEID = 1000007;
 int rooms[CYCLIST_COUNT + 1];         // which room a certain cyclist is at
 int cyclists[SERVICE_ROOM_COUNT + 1]; // which cyclist is at a certain room
 int payment_room;                     // count of people in payment room
-//int exit_line; // count of people in exit line
-int line; // line of input file we are currently reading
+int exit_line;                        // count of people in exit line
+int line;                             // line of input file we are currently reading
 int count_departed;
 char s[15];
 
@@ -42,15 +42,18 @@ void start_service()
         printf("%d must leave room %d first\n", cyclist, rooms[cyclist]);
         call_error();
     }
-    // if (room == 1 && exit_line) {
-    //     printf("%d cannot start service, people are waiting in departure line:\n", cyclist);
-    //     for (int i=1; i<=CYCLIST_COUNT; i++) {
-    //         if (rooms[i] == WAITID) {
-    //             printf("%d is waiting\n", i);
-    //         }
-    //     }
-    //     call_error();
-    // }
+    if (room == 1 && exit_line)
+    {
+        printf("%d cannot start service, people are waiting in departure line:\n", cyclist);
+        for (int i = 1; i <= CYCLIST_COUNT; i++)
+        {
+            if (rooms[i] == WAITID)
+            {
+                printf("%d is waiting\n", i);
+            }
+        }
+        call_error();
+    }
     cyclists[room] = cyclist;
     rooms[cyclist] = room;
 }
@@ -104,7 +107,7 @@ void finish_paying()
     }
     rooms[cyclist] = WAITID;
     payment_room--;
-    //exit_line++;
+    exit_line++;
     assert(payment_room >= 0);
 }
 
@@ -138,8 +141,8 @@ void depart()
         call_error();
     }
     rooms[cyclist] = DONEID;
-    //exit_line--;
-    //assert(exit_line >= 0);
+    exit_line--;
+    assert(exit_line >= 0);
     count_departed++;
 }
 
@@ -173,9 +176,9 @@ int main()
     {
         ++line;
         scanf("%s", s);
-        //if (!strcmp(s, "has")) depart();
-        //else
-        if (!strcmp(s, "started"))
+        if (!strcmp(s, "has"))
+            depart();
+        else if (!strcmp(s, "started"))
         {
             scanf("%s", s);
             if (!strcmp(s, "taking"))
@@ -193,6 +196,6 @@ int main()
         }
     }
     all_empty();
-    //assert(count_departed == CYCLIST_COUNT);
+    assert(count_departed == CYCLIST_COUNT);
     puts("ok");
 }
