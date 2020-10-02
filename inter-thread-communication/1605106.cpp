@@ -5,6 +5,8 @@
 #include <semaphore.h>
 #include <cstring>
 #include <time.h>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -42,10 +44,13 @@ void depart(void *arg)
 void leave_payment_room(void *arg)
 {
     sem_wait(&payment_currentItems_sem);
+    int random = rand() % 100 + 1;
+    this_thread::sleep_for(chrono::milliseconds(random));
     printf("%s finished paying the service bill\n", (char *)arg);
     fflush(stdout);
     sem_post(&payment_capacity_sem);
 
+    //TODO
     /*int service_current, res;
     res = sem_getvalue(&service_currentItems_sem, &service_current);
     if (res != 0)
@@ -56,16 +61,19 @@ void leave_payment_room(void *arg)
 
     if (service_current == 0)
     {
-        //printf("debug\n");
         pthread_mutex_lock(&servicemen_mutex[0]);
         pthread_mutex_lock(&direction_mutex);
     }
     depart(arg);*/
+
+    //TODO
 }
 void go_to_payment_room(void *arg)
 {
 
     sem_post(&service_capacity_sem);
+
+    //TODO
 
     /*int capacity, res;
     res = sem_getvalue(&service_capacity_sem, &capacity);
@@ -79,6 +87,8 @@ void go_to_payment_room(void *arg)
         pthread_mutex_unlock(&direction_mutex);
     }*/
 
+    //TODO
+
     sem_wait(&payment_capacity_sem);
     printf("%s started paying the service bill\n", (char *)arg);
     fflush(stdout);
@@ -90,11 +100,13 @@ void change_room(int i, void *arg)
 {
     if (i == 1)
     {
-        sem_post(&service_currentItems_sem);
+        sem_post(&service_currentItems_sem); //up
     }
     if (i == S)
     {
-        printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1);
+        int random = rand() % 100 + 1;
+        this_thread::sleep_for(chrono::milliseconds(random));
+        printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1 + 1);
         fflush(stdout);
         pthread_mutex_unlock(&servicemen_mutex[i - 1]);
         sem_wait(&service_currentItems_sem);
@@ -102,18 +114,23 @@ void change_room(int i, void *arg)
         return;
     }
     pthread_mutex_lock(&servicemen_mutex[i]);
-    printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1);
+    int random = rand() % 100 + 1;
+    this_thread::sleep_for(chrono::milliseconds(random));
+    printf("%s finished taking service from serviceman %d\n", (char *)arg, i - 1 + 1);
     fflush(stdout);
+    printf("%s started taking service from serviceman %d\n", (char *)arg, i + 1);
+    fflush(stdout);
+
     pthread_mutex_unlock(&servicemen_mutex[i - 1]);
 
-    printf("%s started taking service from serviceman %d\n", (char *)arg, i);
-    fflush(stdout);
     change_room(i + 1, arg);
 }
 void *enter_service_room(void *arg)
 {
-    sem_wait(&service_capacity_sem);
+    sem_wait(&service_capacity_sem); //down
     pthread_mutex_lock(&servicemen_mutex[0]);
+
+    //TODO
 
     /*int current_items, res;
         res = sem_getvalue(&service_currentItems_sem, &current_items);
@@ -128,7 +145,9 @@ void *enter_service_room(void *arg)
             pthread_mutex_lock(&direction_mutex);
         }*/
 
-    printf("%s started taking service from serviceman 0\n", (char *)arg);
+    //TODO
+
+    printf("%s started taking service from serviceman 1\n", (char *)arg);
     fflush(stdout);
     change_room(1, arg);
 }
